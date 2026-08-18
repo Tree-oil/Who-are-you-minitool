@@ -568,11 +568,11 @@ function render() {
 
   const seed = 1000 + (hash(input.value || '') % 9000);
   const idle = mouseOnScreen ? 0 : 1;
-  const sway = Math.sin(time * 1.4) * 0.022 * idle;
-  const headTilt = Math.sin(time * 1.9) * 0.045 * idle;
+  const sway = Math.sin(time * 1.2) * 0.018 * idle;
+  const headTilt = Math.sin(time * 1.2) * 0.04 * idle;
   const hopK = Math.sin(Math.max(0, hop) * Math.PI);
   const hopY = -hopK * 13;
-  const armSway = Math.sin(time * 1.8) * 2.2 * idle + hopK * 13;
+  const armSway = Math.sin(time * 1.2) * 1.3 * idle + hopK * 13;
 
   drawGround(seed);
 
@@ -602,7 +602,7 @@ function render() {
 function tick() {
   time += 0.016;
   hopT -= 0.016;
-  if (hopT <= 0) { hop = 1; hopT = 6 + Math.random() * 6; }
+  if (hopT <= 0 && !mouseOnScreen) { hop = 1; hopT = 7 + Math.random() * 6; }
   if (hop > 0) hop = Math.max(0, hop - 0.035);
   if (mouse.active) {
     const rect = canvas.getBoundingClientRect();
