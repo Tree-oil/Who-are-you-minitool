@@ -298,6 +298,7 @@ let hop = 0;
 let hopT = 5 + Math.random() * 4;
 let gaze = { x: 0, y: 0 };
 let mouse = { x: 150, y: 60, active: false };
+let mouseOnScreen = false;
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -398,7 +399,7 @@ function drawHair(c, seed) {
 }
 
 function drawFace(c, seed) {
-  const gx = gaze.x * 1.6, gy = gaze.y * 1.2;
+  const gx = gaze.x * 3.2, gy = gaze.y * 2.4;
   const eyeY = HEAD.y + 16;
   const eyeL = { x: HEAD.x - 17 + gx, y: eyeY + gy * 0.6 };
   const eyeR = { x: HEAD.x + 17 + gx, y: eyeY + gy * 0.6 };
@@ -410,8 +411,8 @@ function drawFace(c, seed) {
     [eyeL, eyeR].forEach((e, i) => {
       fillSketch(ctx, ellipsePts(e.x, e.y, 7.5, 8), '#fffdf5', 1, seed + 80 + i);
       strokeSketch(ctx, ellipsePts(e.x, e.y, 7.5, 8), { seed: seed + 80 + i, width: 1.8 });
-      const px = e.x + gaze.x * 3.4;
-      const py = e.y + gaze.y * 2.6;
+      const px = e.x + gaze.x * 5.2;
+      const py = e.y + gaze.y * 4;
       fillSketch(ctx, ellipsePts(px, py, 3.4, 3.4), c.iris, 0.7, seed + 84 + i);
       fillSketch(ctx, ellipsePts(px - 1, py - 1, 1.2, 1.2), 'rgba(35,35,35,0.5)', 0.5, seed + 86 + i);
     });
@@ -566,9 +567,9 @@ function render() {
   ctx.setTransform(sx, 0, 0, sy, tx, ty);
 
   const seed = 1000 + (hash(input.value || '') % 9000);
-  const idle = mouse.active ? 0 : 1;
+  const idle = mouseOnScreen ? 0 : 1;
   const sway = Math.sin(time * 1.4) * 0.022 * idle;
-  const headTilt = Math.sin(time * 1.9) * 0.05 * idle + gaze.x * 0.03 * (mouse.active ? 1 : 0);
+  const headTilt = Math.sin(time * 1.9) * 0.045 * idle;
   const hopK = Math.sin(Math.max(0, hop) * Math.PI);
   const hopY = -hopK * 13;
   const armSway = Math.sin(time * 1.8) * 2.2 * idle + hopK * 13;
@@ -609,6 +610,9 @@ function tick() {
     const my = ((mouse.y - rect.top) / rect.height) * LOGICAL.h;
     gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 80)) - gaze.x) * 0.08;
     gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 100)) - gaze.y) * 0.08;
+  } else {
+    gaze.x *= 0.9;
+    gaze.y *= 0.9;
   }
   render();
   requestAnimationFrame(tick);
@@ -622,6 +626,11 @@ window.addEventListener('mousemove', (e) => {
   mouse.x = e.clientX;
   mouse.y = e.clientY;
   mouse.active = true;
+  mouseOnScreen = true;
+});
+document.documentElement.addEventListener('mouseleave', () => {
+  mouse.active = false;
+  mouseOnScreen = false;
 });
 window.addEventListener('resize', resize);
 
