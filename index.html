@@ -50,7 +50,7 @@
   }
   .inputWrap {
     position: absolute;
-    bottom: 4.5%;
+    bottom: 10%;
     left: 50%;
     transform: translateX(-50%);
     width: min(370px, 90vw);
@@ -293,6 +293,9 @@ paper.width = 600; paper.height = 760;
 }
 
 let creature = makeCreature('');
+let time = 0;
+let hop = 0;
+let hopT = 5 + Math.random() * 4;
 let gaze = { x: 0, y: 0 };
 let mouse = { x: 150, y: 60, active: false };
 
@@ -395,7 +398,7 @@ function drawHair(c, seed) {
 }
 
 function drawFace(c, seed) {
-  const gx = gaze.x * 3.6, gy = gaze.y * 2.6;
+  const gx = gaze.x * 1.6, gy = gaze.y * 1.2;
   const eyeY = HEAD.y + 16;
   const eyeL = { x: HEAD.x - 17 + gx, y: eyeY + gy * 0.6 };
   const eyeR = { x: HEAD.x + 17 + gx, y: eyeY + gy * 0.6 };
@@ -407,8 +410,8 @@ function drawFace(c, seed) {
     [eyeL, eyeR].forEach((e, i) => {
       fillSketch(ctx, ellipsePts(e.x, e.y, 7.5, 8), '#fffdf5', 1, seed + 80 + i);
       strokeSketch(ctx, ellipsePts(e.x, e.y, 7.5, 8), { seed: seed + 80 + i, width: 1.8 });
-      const px = e.x + gaze.x * 4.2;
-      const py = e.y + gaze.y * 3.2;
+      const px = e.x + gaze.x * 3.4;
+      const py = e.y + gaze.y * 2.6;
       fillSketch(ctx, ellipsePts(px, py, 3.4, 3.4), c.iris, 0.7, seed + 84 + i);
       fillSketch(ctx, ellipsePts(px - 1, py - 1, 1.2, 1.2), 'rgba(35,35,35,0.5)', 0.5, seed + 86 + i);
     });
@@ -462,7 +465,7 @@ function drawFace(c, seed) {
   }
 }
 
-function drawLimbs(c, seed) {
+function drawLimbs(c, seed, armSway = 0) {
   [[138, BODY.y + BODY.ry + 2, 134, 326], [162, BODY.y + BODY.ry + 2, 166, 326]].forEach(([x1, y1, x2, y2], i) => {
     strokeSketch(ctx, limbPts({ x: x1, y: y1 }, { x: x2, y: y2 }, seed + 150 + i, 0.05), { passes: 2, width: 2.2, seed: seed + 150 + i });
   });
@@ -486,15 +489,16 @@ function drawLimbs(c, seed) {
   }
   poses.forEach((p, i) => {
     const dir = i === 0 ? -1 : 1;
+    const hx = p.h.x + armSway, hy = p.h.y - Math.max(0, armSway) * 0.9;
     const pts = [];
     const n = 8;
     for (let k = 0; k <= n; k++) {
       const t = k / n;
       const bow = Math.sin(t * Math.PI) * 9 * dir;
-      pts.push({ x: p.s.x + (p.h.x - p.s.x) * t + bow + n2(t * 5, 3, seed + 160 + i) * 2.5, y: p.s.y + (p.h.y - p.s.y) * t + n2(t * 7, 5, seed + 161 + i) * 2.5 });
+      pts.push({ x: p.s.x + (hx - p.s.x) * t + bow + n2(t * 5, 3, seed + 160 + i) * 2.5, y: p.s.y + (hy - p.s.y) * t + n2(t * 7, 5, seed + 161 + i) * 2.5 });
     }
     strokeSketch(ctx, pts, { passes: 2, width: 2, seed: seed + 160 + i });
-    strokeSketch(ctx, arcPts(p.h.x, p.h.y, 4.6, Math.PI * 0.12, Math.PI * 0.88, 8), { passes: 1, width: 2, seed: seed + 170 + i });
+    strokeSketch(ctx, arcPts(hx, hy, 4.6, Math.PI * 0.12, Math.PI * 0.88, 8), { passes: 1, width: 2, seed: seed + 170 + i });
   });
 }
 
@@ -532,12 +536,14 @@ function wobblyLine(x1, y1, x2, y2, seed, amp) {
 function drawInputFrame(seed) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   const cw = canvas.width, ch = canvas.height;
-  const sx = (cw / LOGICAL.w) * 0.72, sy = (ch / LOGICAL.h) * 0.72;
+  const sc = 0.72;
+  const sx = (cw / LOGICAL.w) * sc, sy = (ch / LOGICAL.h) * sc;
+  const tx = cw * (1 - sc) / 2, ty = ch * 0.16;
   const iw = Math.min(370, window.innerWidth * 0.9) * dpr;
   const iH = 58 * dpr;
-  const iTop = ch - ch * 0.045 - iH;
+  const iTop = ch - ch * 0.10 - iH;
   const iLeft = (cw - iw) / 2;
-  const x = iLeft / sx, y = (iTop - ch * 0.15) / sy, w = iw / sx, h = iH / sy;
+  const x = (iLeft - tx) / sx, y = (iTop - ty) / sy, w = iw / sx, h = iH / sy;
   const o = 18;
   strokeSketch(ctx, wobblyLine(x - o, y + 5, x + w + o, y + 3, seed + 300, 4.5), { passes: 2, width: 3, seed: seed + 300 });
   strokeSketch(ctx, wobblyLine(x + w + 5, y - o * 0.4, x + w + 3, y + h + o * 0.4, seed + 301, 1.8), { passes: 2, width: 3, seed: seed + 301 });
@@ -552,28 +558,57 @@ function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(paper, 0, 0, cw, ch);
 
-  const sx = (cw / LOGICAL.w) * 0.72;
-  const sy = (ch / LOGICAL.h) * 0.72;
-  ctx.setTransform(sx, 0, 0, sy, 0, ch * 0.15);
+  const sc = 0.72;
+  const sx = (cw / LOGICAL.w) * sc;
+  const sy = (ch / LOGICAL.h) * sc;
+  const tx = cw * (1 - sc) / 2;
+  const ty = ch * 0.16;
+  ctx.setTransform(sx, 0, 0, sy, tx, ty);
 
   const seed = 1000 + (hash(input.value || '') % 9000);
+  const idle = mouse.active ? 0 : 1;
+  const sway = Math.sin(time * 1.4) * 0.022 * idle;
+  const headTilt = Math.sin(time * 1.9) * 0.05 * idle + gaze.x * 0.03 * (mouse.active ? 1 : 0);
+  const hopK = Math.sin(Math.max(0, hop) * Math.PI);
+  const hopY = -hopK * 13;
+  const armSway = Math.sin(time * 1.8) * 2.2 * idle + hopK * 13;
+
   drawGround(seed);
+
+  ctx.save();
+  ctx.translate(150, 260);
+  ctx.rotate(sway);
+  ctx.translate(-150, -260);
+  ctx.translate(0, hopY);
+
   drawBody(creature, seed);
-  drawLimbs(creature, seed);
+  drawLimbs(creature, seed, armSway);
+
+  ctx.save();
+  ctx.translate(HEAD.x, HEAD.y);
+  ctx.rotate(headTilt);
+  ctx.translate(-HEAD.x, -HEAD.y);
   drawEars(creature, seed);
   drawHead(creature, seed);
   drawHair(creature, seed);
   drawFace(creature, seed);
+  ctx.restore();
+  ctx.restore();
+
   drawInputFrame(seed);
 }
 
 function tick() {
+  time += 0.016;
+  hopT -= 0.016;
+  if (hopT <= 0) { hop = 1; hopT = 6 + Math.random() * 6; }
+  if (hop > 0) hop = Math.max(0, hop - 0.035);
   if (mouse.active) {
     const rect = canvas.getBoundingClientRect();
     const mx = ((mouse.x - rect.left) / rect.width) * LOGICAL.w;
     const my = ((mouse.y - rect.top) / rect.height) * LOGICAL.h;
-    gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 80)) - gaze.x) * 0.18;
-    gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 100)) - gaze.y) * 0.18;
+    gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 80)) - gaze.x) * 0.08;
+    gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 100)) - gaze.y) * 0.08;
   }
   render();
   requestAnimationFrame(tick);
