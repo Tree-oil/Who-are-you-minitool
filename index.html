@@ -302,7 +302,7 @@ let lastT = performance.now();
 let gaze = { x: 0, y: 0 };
 let mouse = { x: 150, y: 60, active: false };
 let mouseOnScreen = false;
-let hasInteracted = false;
+let idleK = 1;
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -572,7 +572,7 @@ function render() {
   ctx.setTransform(sx, 0, 0, sy, tx, ty);
 
   const seed = 1000 + (hash(input.value || '') % 9000);
-  const idle = (!mouseOnScreen && !hasInteracted) ? 1 : 0;
+  const idle = idleK;
   const sway = Math.sin(time * 1.0) * 0.012 * idle;
   const headTilt = Math.sin(time * 1.0) * 0.028 * idle + gaze.x * 0.05;
   const hopK = Math.sin(Math.max(0, hop) * Math.PI);
@@ -611,7 +611,7 @@ function tick() {
   const dt = (now - lastT) / 1000;
   lastT = now;
   time += dt;
-  if (actionT <= 0 && !hasInteracted) {
+  if (actionT <= 0 && !mouseOnScreen) {
     if (Math.random() < 0.45) { hop = 1; } else { waveProg = 1; }
     actionT = 6 + Math.random() * 6;
   }
@@ -623,7 +623,12 @@ function tick() {
     const my = ((mouse.y - rect.top) / rect.height) * LOGICAL.h;
     gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 75)) - gaze.x) * 0.13;
     gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 90)) - gaze.y) * 0.13;
+  } else {
+    gaze.x *= 0.88;
+    gaze.y *= 0.88;
   }
+  const idleTarget = mouseOnScreen ? 0 : 1;
+  idleK += (idleTarget - idleK) * 0.06;
   render();
   requestAnimationFrame(tick);
 }
@@ -637,7 +642,6 @@ window.addEventListener('mousemove', (e) => {
   mouse.y = e.clientY;
   mouse.active = true;
   mouseOnScreen = true;
-  hasInteracted = true;
 });
 document.documentElement.addEventListener('mouseleave', () => {
   mouse.active = false;
