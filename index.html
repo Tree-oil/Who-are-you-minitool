@@ -494,7 +494,7 @@ function drawLimbs(c, seed) {
       pts.push({ x: p.s.x + (p.h.x - p.s.x) * t + bow + n2(t * 5, 3, seed + 160 + i) * 2.5, y: p.s.y + (p.h.y - p.s.y) * t + n2(t * 7, 5, seed + 161 + i) * 2.5 });
     }
     strokeSketch(ctx, pts, { passes: 2, width: 2, seed: seed + 160 + i });
-    fillSketch(ctx, ellipsePts(p.h.x, p.h.y, 3.8, 3.8, 12), '#232323', 0.7, seed + 170 + i);
+    strokeSketch(ctx, arcPts(p.h.x, p.h.y, 4.6, Math.PI * 0.12, Math.PI * 0.88, 8), { passes: 1, width: 2, seed: seed + 170 + i });
   });
 }
 
