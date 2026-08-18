@@ -403,7 +403,7 @@ function drawHair(c, seed) {
 }
 
 function drawFace(c, seed) {
-  const gx = gaze.x * 4.5, gy = gaze.y * 3.5;
+  const gx = gaze.x * 6.5, gy = gaze.y * 6.5;
   const eyeY = HEAD.y + 16;
   const eyeL = { x: HEAD.x - 17 + gx, y: eyeY + gy * 0.7 };
   const eyeR = { x: HEAD.x + 17 + gx, y: eyeY + gy * 0.7 };
@@ -443,15 +443,15 @@ function drawFace(c, seed) {
       strokeSketch(ctx, [{ x: e.x - 6, y: browY + 1 }, { x: e.x + 6, y: browY - 1 }], { passes: 1, width: 2, seed: seed + 114 + i });
     }
   });
-  const fx = HEAD.x + gx * 0.8, fy = HEAD.y + 26 + gy * 0.6;
+  const fx = HEAD.x + gx * 0.95, fy = HEAD.y + 26 + gy * 0.95;
   strokeSketch(ctx, ellipsePts(fx, fy, 10.5, 4.2, 14), { passes: 1, width: 1.8, seed: seed + 120 });
   fillSketch(ctx, ellipsePts(fx, fy, 1.8, 1.8), '#4c453a', 0.5, seed + 122);
   [[-6, 9], [6, 9]].forEach(([dx, dy], i) => {
     const wx = fx + dx, wy = fy + dy;
     fillSketch(ctx, ellipsePts(wx, wy, 1.1, 1.1), 'rgba(74,69,58,0.8)', 0.5, seed + 124 + i);
   });
-  const my = HEAD.y + 44 + gy * 0.6;
-  const mx = HEAD.x + gx * 0.8;
+  const my = HEAD.y + 44 + gy * 0.95;
+  const mx = HEAD.x + gx * 0.95;
   if (c.mouth === 'smile') {
     const pts = [];
     const n = 14;
@@ -574,7 +574,7 @@ function render() {
   const seed = 1000 + (hash(input.value || '') % 9000);
   const idle = (!mouseOnScreen && !hasInteracted) ? 1 : 0;
   const sway = Math.sin(time * 1.0) * 0.012 * idle;
-  const headTilt = Math.sin(time * 1.0) * 0.028 * idle;
+  const headTilt = Math.sin(time * 1.0) * 0.028 * idle + gaze.x * 0.05;
   const hopK = Math.sin(Math.max(0, hop) * Math.PI);
   const hopY = -hopK * 9;
   const armIdle = Math.sin(time * 1.0) * 2.2 * idle;
@@ -595,7 +595,7 @@ function render() {
   ctx.save();
   ctx.translate(HEAD.x, HEAD.y);
   ctx.rotate(headTilt);
-  ctx.translate(-HEAD.x, -HEAD.y);
+  ctx.translate(-HEAD.x + gaze.x * 2.2, -HEAD.y + gaze.y * 1.8);
   drawEars(creature, seed);
   drawHead(creature, seed);
   drawHair(creature, seed);
@@ -621,8 +621,8 @@ function tick() {
     const rect = canvas.getBoundingClientRect();
     const mx = ((mouse.x - rect.left) / rect.width) * LOGICAL.w;
     const my = ((mouse.y - rect.top) / rect.height) * LOGICAL.h;
-    gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 80)) - gaze.x) * 0.1;
-    gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 100)) - gaze.y) * 0.1;
+    gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 75)) - gaze.x) * 0.13;
+    gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 90)) - gaze.y) * 0.13;
   }
   render();
   requestAnimationFrame(tick);
