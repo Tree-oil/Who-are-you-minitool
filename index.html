@@ -129,7 +129,7 @@ function makeCreature(name) {
   if (name === '') {
     return {
       color: BODY_COLORS[0], ears: 'droop', hair: 'grass', eye: 'dot',
-      mouth: 'smile', arms: 'down', brow: 'raised', blush: true, iris: IRIS[0], jumpy: false,
+      mouth: 'smile', arms: 'down', brow: 'raised', blush: true, iris: IRIS[0],
     };
   }
   const rng = mulberry32(hash(name));
@@ -143,7 +143,6 @@ function makeCreature(name) {
     brow: pick(rng, BROW),
     blush: chance(rng, 0.6),
     iris: pick(rng, IRIS),
-    jumpy: chance(rng, 0.5),
   };
 }
 
@@ -297,7 +296,8 @@ paper.width = 600; paper.height = 760;
 let creature = makeCreature('');
 let time = 0;
 let hop = 0;
-let hopT = 5 + Math.random() * 4;
+let waveProg = 0;
+let actionT = 4 + Math.random() * 4;
 let lastT = performance.now();
 let gaze = { x: 0, y: 0 };
 let mouse = { x: 150, y: 60, active: false };
@@ -403,7 +403,7 @@ function drawHair(c, seed) {
 }
 
 function drawFace(c, seed) {
-  const gx = gaze.x * 2.8, gy = gaze.y * 2.2;
+  const gx = gaze.x * 4.5, gy = gaze.y * 3.5;
   const eyeY = HEAD.y + 16;
   const eyeL = { x: HEAD.x - 17 + gx, y: eyeY + gy * 0.7 };
   const eyeR = { x: HEAD.x + 17 + gx, y: eyeY + gy * 0.7 };
@@ -443,15 +443,15 @@ function drawFace(c, seed) {
       strokeSketch(ctx, [{ x: e.x - 6, y: browY + 1 }, { x: e.x + 6, y: browY - 1 }], { passes: 1, width: 2, seed: seed + 114 + i });
     }
   });
-  const fx = HEAD.x + gx * 0.7, fy = HEAD.y + 26 + gy * 0.5;
+  const fx = HEAD.x + gx * 0.8, fy = HEAD.y + 26 + gy * 0.6;
   strokeSketch(ctx, ellipsePts(fx, fy, 10.5, 4.2, 14), { passes: 1, width: 1.8, seed: seed + 120 });
   fillSketch(ctx, ellipsePts(fx, fy, 1.8, 1.8), '#4c453a', 0.5, seed + 122);
   [[-6, 9], [6, 9]].forEach(([dx, dy], i) => {
     const wx = fx + dx, wy = fy + dy;
     fillSketch(ctx, ellipsePts(wx, wy, 1.1, 1.1), 'rgba(74,69,58,0.8)', 0.5, seed + 124 + i);
   });
-  const my = HEAD.y + 44 + gy * 0.5;
-  const mx = HEAD.x + gx * 0.7;
+  const my = HEAD.y + 44 + gy * 0.6;
+  const mx = HEAD.x + gx * 0.8;
   if (c.mouth === 'smile') {
     const pts = [];
     const n = 14;
@@ -470,7 +470,7 @@ function drawFace(c, seed) {
   }
 }
 
-function drawLimbs(c, seed, armSway = 0) {
+function drawLimbs(c, seed, swayL = 0, swayR = 0) {
   [[138, BODY.y + BODY.ry + 2, 134, 326], [162, BODY.y + BODY.ry + 2, 166, 326]].forEach(([x1, y1, x2, y2], i) => {
     strokeSketch(ctx, limbPts({ x: x1, y: y1 }, { x: x2, y: y2 }, seed + 150 + i, 0.05), { passes: 2, width: 2.2, seed: seed + 150 + i });
   });
@@ -494,6 +494,7 @@ function drawLimbs(c, seed, armSway = 0) {
   }
   poses.forEach((p, i) => {
     const dir = i === 0 ? -1 : 1;
+    const armSway = i === 0 ? swayL : swayR;
     const hx = p.h.x + armSway, hy = p.h.y - Math.max(0, armSway) * 0.9;
     const pts = [];
     const n = 8;
@@ -576,7 +577,9 @@ function render() {
   const headTilt = Math.sin(time * 1.0) * 0.028 * idle;
   const hopK = Math.sin(Math.max(0, hop) * Math.PI);
   const hopY = -hopK * 9;
-  const armSway = hopK * 9;
+  const armIdle = Math.sin(time * 1.0) * 2.2 * idle;
+  const armWave = Math.sin(waveProg * Math.PI * 3) * 7 * waveProg;
+  const jumpRaise = hopK * 9;
 
   drawGround(seed);
 
@@ -587,7 +590,7 @@ function render() {
   ctx.translate(0, hopY);
 
   drawBody(creature, seed);
-  drawLimbs(creature, seed, armSway);
+  drawLimbs(creature, seed, armIdle + armWave + jumpRaise, armIdle + jumpRaise);
 
   ctx.save();
   ctx.translate(HEAD.x, HEAD.y);
@@ -608,15 +611,18 @@ function tick() {
   const dt = (now - lastT) / 1000;
   lastT = now;
   time += dt;
-  hopT -= dt;
-  if (hopT <= 0 && !hasInteracted && creature.jumpy) { hop = 1; hopT = 9 + Math.random() * 7; }
+  if (actionT <= 0 && !hasInteracted) {
+    if (Math.random() < 0.45) { hop = 1; } else { waveProg = 1; }
+    actionT = 6 + Math.random() * 6;
+  }
   if (hop > 0) hop = Math.max(0, hop - dt / 0.5);
+  if (waveProg > 0) waveProg = Math.max(0, waveProg - dt / 1.4);
   if (mouse.active) {
     const rect = canvas.getBoundingClientRect();
     const mx = ((mouse.x - rect.left) / rect.width) * LOGICAL.w;
     const my = ((mouse.y - rect.top) / rect.height) * LOGICAL.h;
-    gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 80)) - gaze.x) * 0.08;
-    gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 100)) - gaze.y) * 0.08;
+    gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 80)) - gaze.x) * 0.1;
+    gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 100)) - gaze.y) * 0.1;
   }
   render();
   requestAnimationFrame(tick);
