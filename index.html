@@ -173,8 +173,9 @@ function trace(ctx, pts, closed) {
 
 function jittered(pts, amp, seed) {
   return pts.map((p, i) => {
-    const w = wobble(p.x, p.y, amp, seed + i * 3.1);
-    return { x: w.x, y: w.y };
+    const jx = amp * n2(i * 1.7 + seed * 0.13, seed * 0.31, seed);
+    const jy = amp * n2(seed * 0.47, i * 2.9 + seed * 0.19, seed + 3);
+    return { x: p.x + jx, y: p.y + jy };
   });
 }
 
@@ -301,6 +302,7 @@ let lastT = performance.now();
 let gaze = { x: 0, y: 0 };
 let mouse = { x: 150, y: 60, active: false };
 let mouseOnScreen = false;
+let hasInteracted = false;
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -441,27 +443,30 @@ function drawFace(c, seed) {
       strokeSketch(ctx, [{ x: e.x - 6, y: browY + 1 }, { x: e.x + 6, y: browY - 1 }], { passes: 1, width: 2, seed: seed + 114 + i });
     }
   });
-  strokeSketch(ctx, ellipsePts(HEAD.x, HEAD.y + 26, 10.5, 4.2, 14), { passes: 1, width: 1.8, seed: seed + 120 });
-  fillSketch(ctx, ellipsePts(HEAD.x, HEAD.y + 26, 1.8, 1.8), '#4c453a', 0.5, seed + 122);
-  [[HEAD.x - 6, HEAD.y + 35], [HEAD.x + 6, HEAD.y + 35]].forEach(([wx, wy], i) => {
+  const fx = HEAD.x + gx * 0.7, fy = HEAD.y + 26 + gy * 0.5;
+  strokeSketch(ctx, ellipsePts(fx, fy, 10.5, 4.2, 14), { passes: 1, width: 1.8, seed: seed + 120 });
+  fillSketch(ctx, ellipsePts(fx, fy, 1.8, 1.8), '#4c453a', 0.5, seed + 122);
+  [[-6, 9], [6, 9]].forEach(([dx, dy], i) => {
+    const wx = fx + dx, wy = fy + dy;
     fillSketch(ctx, ellipsePts(wx, wy, 1.1, 1.1), 'rgba(74,69,58,0.8)', 0.5, seed + 124 + i);
   });
-  const my = HEAD.y + 44;
+  const my = HEAD.y + 44 + gy * 0.5;
+  const mx = HEAD.x + gx * 0.7;
   if (c.mouth === 'smile') {
     const pts = [];
     const n = 14;
     for (let i = 0; i <= n; i++) {
       const t = -1 + (2 * i) / n;
-      pts.push({ x: HEAD.x + t * 34, y: my - 3 - t * t * 8 });
+      pts.push({ x: mx + t * 34, y: my - 3 - t * t * 8 });
     }
     strokeSketch(ctx, pts, { passes: 1, width: 2.6, seed: seed + 130 });
   } else if (c.mouth === 'open') {
-    fillSketch(ctx, ellipsePts(HEAD.x, my + 1, 5.5, 6), '#3a2f28', 1, seed + 132);
-    strokeSketch(ctx, ellipsePts(HEAD.x, my + 1, 5.5, 6), { seed: seed + 132, width: 1.6 });
+    fillSketch(ctx, ellipsePts(mx, my + 1, 5.5, 6), '#3a2f28', 1, seed + 132);
+    strokeSketch(ctx, ellipsePts(mx, my + 1, 5.5, 6), { seed: seed + 132, width: 1.6 });
   } else if (c.mouth === 'flat') {
-    strokeSketch(ctx, [{ x: HEAD.x - 8, y: my }, { x: HEAD.x + 8, y: my + 1 }], { passes: 1, width: 1.8, seed: seed + 134 });
+    strokeSketch(ctx, [{ x: mx - 8, y: my }, { x: mx + 8, y: my + 1 }], { passes: 1, width: 1.8, seed: seed + 134 });
   } else if (c.mouth === 'ooh') {
-    fillSketch(ctx, ellipsePts(HEAD.x, my, 3, 4.5), '#3a2f28', 0.8, seed + 136);
+    fillSketch(ctx, ellipsePts(mx, my, 3, 4.5), '#3a2f28', 0.8, seed + 136);
   }
 }
 
@@ -566,7 +571,7 @@ function render() {
   ctx.setTransform(sx, 0, 0, sy, tx, ty);
 
   const seed = 1000 + (hash(input.value || '') % 9000);
-  const idle = mouseOnScreen ? 0 : 1;
+  const idle = (!mouseOnScreen && !hasInteracted) ? 1 : 0;
   const sway = Math.sin(time * 1.0) * 0.012 * idle;
   const headTilt = Math.sin(time * 1.0) * 0.028 * idle;
   const hopK = Math.sin(Math.max(0, hop) * Math.PI);
@@ -604,7 +609,7 @@ function tick() {
   lastT = now;
   time += dt;
   hopT -= dt;
-  if (hopT <= 0 && !mouseOnScreen && creature.jumpy) { hop = 1; hopT = 9 + Math.random() * 7; }
+  if (hopT <= 0 && !hasInteracted && creature.jumpy) { hop = 1; hopT = 9 + Math.random() * 7; }
   if (hop > 0) hop = Math.max(0, hop - dt / 0.5);
   if (mouse.active) {
     const rect = canvas.getBoundingClientRect();
@@ -612,9 +617,6 @@ function tick() {
     const my = ((mouse.y - rect.top) / rect.height) * LOGICAL.h;
     gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 80)) - gaze.x) * 0.08;
     gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 100)) - gaze.y) * 0.08;
-  } else {
-    gaze.x *= 0.9;
-    gaze.y *= 0.9;
   }
   render();
   requestAnimationFrame(tick);
@@ -629,6 +631,7 @@ window.addEventListener('mousemove', (e) => {
   mouse.y = e.clientY;
   mouse.active = true;
   mouseOnScreen = true;
+  hasInteracted = true;
 });
 document.documentElement.addEventListener('mouseleave', () => {
   mouse.active = false;
