@@ -209,7 +209,7 @@ let creature = makeCreature('');
 let time = 0;
 let hop = 0;
 let waveProg = 0;
-let actionT = 4 + Math.random() * 4;
+let actionT = 1.2 + Math.random() * 1.4;
 let lastT = performance.now();
 let gaze = { x: 0, y: 0 };
 let mouse = { x: 150, y: 60, active: false };
@@ -315,7 +315,7 @@ function drawHair(c, seed) {
 }
 
 function drawFace(c, seed) {
-  const gx = gaze.x * 6.5, gy = gaze.y * 6.5;
+  const gx = gaze.x * 15, gy = gaze.y * 15;
   const eyeY = HEAD.y + 16;
   const eyeL = { x: HEAD.x - 17 + gx, y: eyeY + gy * 0.7 };
   const eyeR = { x: HEAD.x + 17 + gx, y: eyeY + gy * 0.7 };
@@ -485,13 +485,13 @@ function render() {
 
   const seed = 1000 + (hash(input.value || '') % 9000);
   const idle = idleK;
-  const sway = Math.sin(time * 1.0) * 0.012 * idle;
-  const headTilt = Math.sin(time * 1.0) * 0.028 * idle + gaze.x * 0.05;
+  const sway = Math.sin(time * 1.0) * 0.02 * idle;
+  const headTilt = Math.sin(time * 1.0) * 0.045 * idle + gaze.x * 0.08;
   const hopK = Math.sin(Math.max(0, hop) * Math.PI);
-  const hopY = -hopK * 9;
-  const armIdle = Math.sin(time * 1.0) * 2.2 * idle;
-  const armWave = Math.sin(waveProg * Math.PI * 3) * 7 * waveProg;
-  const jumpRaise = hopK * 9;
+  const hopY = -hopK * 14;
+  const armIdle = Math.sin(time * 1.0) * 3.6 * idle;
+  const armWave = Math.sin(waveProg * Math.PI * 3) * 11 * waveProg;
+  const jumpRaise = hopK * 14;
 
   drawGround(seed);
 
@@ -507,7 +507,7 @@ function render() {
   ctx.save();
   ctx.translate(HEAD.x, HEAD.y);
   ctx.rotate(headTilt);
-  ctx.translate(-HEAD.x + gaze.x * 2.2, -HEAD.y + gaze.y * 1.8);
+  ctx.translate(-HEAD.x + gaze.x * 5.5, -HEAD.y + gaze.y * 4.5);
   drawEars(creature, seed);
   drawHead(creature, seed);
   drawHair(creature, seed);
@@ -523,18 +523,19 @@ function tick() {
   const dt = (now - lastT) / 1000;
   lastT = now;
   time += dt;
+  actionT -= dt;
   if (actionT <= 0 && !mouseOnScreen) {
     if (Math.random() < 0.45) { hop = 1; } else { waveProg = 1; }
-    actionT = 6 + Math.random() * 6;
+    actionT = 2 + Math.random() * 1.8;
   }
-  if (hop > 0) hop = Math.max(0, hop - dt / 0.5);
-  if (waveProg > 0) waveProg = Math.max(0, waveProg - dt / 1.4);
+  if (hop > 0) hop = Math.max(0, hop - dt / 0.65);
+  if (waveProg > 0) waveProg = Math.max(0, waveProg - dt / 1.6);
   if (mouse.active) {
     const rect = canvas.getBoundingClientRect();
     const mx = ((mouse.x - rect.left) / rect.width) * LOGICAL.w;
     const my = ((mouse.y - rect.top) / rect.height) * LOGICAL.h;
-    gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 75)) - gaze.x) * 0.13;
-    gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 90)) - gaze.y) * 0.13;
+    gaze.x += (Math.max(-1, Math.min(1, (mx - 150) / 75)) - gaze.x) * 0.2;
+    gaze.y += (Math.max(-1, Math.min(1, (my - 158) / 90)) - gaze.y) * 0.2;
   } else {
     gaze.x *= 0.88;
     gaze.y *= 0.88;
